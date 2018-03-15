@@ -197,12 +197,12 @@ void print_ast_tree(ast_node_t * node)
 ////////////////////////////////////////////////////////////////////////////////
 
 // Grammar:
-// expr         = add
-// add          = mult (('+' | '-') mult)*
-// mult         = pow (('*' | '/') pow)*
-// pow          = minus ('^' pow)*
-// minus        = '-'? term
-// term         = <NUMBER> | '(' expr ')'
+// expr         = add;
+// add          = mult, {('+' | '-'), mult};
+// mult         = pow, {('*' | '/'), pow};
+// pow          = minus, {'^', pow};
+// minus        = ['-'], term;
+// term         = <NUMBER> | '(', expr, ')';
 
 bool is_token(token_type_t type)
 {
