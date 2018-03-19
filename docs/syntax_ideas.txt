@@ -1,0 +1,62 @@
+var ident, ident : type = expr;     // runtime mutable
+const ident, ident : type = expr;   // static const
+let ident, ident : type = expr;     // runtime const
+
+//
+/* /* */ */ 
+
+(u|i)(8|16|32|64)
+b(8|32) true false
+f(32|64)
+type*[N] // array of pointers to type, N=0 valid
+
+ident = expr; // not an expr!!!
+expr;
+
+if (expr) {}
+else if (expr) {}
+else {}
+loop {}
+while: name (expr) {} // :name optional
+for: name (stmt; expr; stmt) {}
+for_rng: name (ident in expr..expr) {}
+for_seq: name (ident in expr, length) {}
+do: name {} while (expr);
+break name; // name optional
+switch (expr) {
+    term, term..term, term -> {}
+    otherwise -> {}
+}
+return expr;
+defer {};
+fn name(ident, ident : type, ident, ident : type) : type {}
+fn name(ident, ident : type, ident, ident : type) : type; // extern
+
+struct Name : parent {
+    ident, ident, ident : type
+    ident, ident, ident : type
+}
+
+enum Name : type {
+    A
+    B
+    C = expr
+    D = expr
+}
+
+import folder1.folder2;
+
+@offset(n)
+@align(n)
+@pack(n)
+@public
+
+size_of(type)
+cast(type)
+
+val.field
+ptr.field // no -> yay
+
+// operator precedence
+// constructors / initializers
+// traits/impls?

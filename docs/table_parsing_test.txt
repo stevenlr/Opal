@@ -1,0 +1,37 @@
+expr        = add
+add         = mult {('+' | '-') mult}
+mult        = term {'*' term}
+term        = number | '(' expr ')'
+
+expr        = add
+add         = mult add_1
+add_1       = add_op mult add_1 | e
+add_op      = '+' | '-'
+mult        = term mult_1
+mult_1      = '*' term | e
+term        = number | '(' expr ')'
+
+First(expr)         = number, '('
+First(add)          = number, '('
+First(add_1)        = '+', '-', e
+First(add_op)       = '+', '-'
+First(mult)         = number, '('
+First(mult_1)       = '*', e
+First(term)         = number, '('
+
+Next(expr)          = $, ')'
+Next(add)           = $, ')'
+Next(add_1)         = $, ')'
+Next(add_op)        = number, '('
+Next(mult)          = '+', '-', $, ')'
+Next(mult_1)        = '+', '-', $, ')'
+Next(term)          = '*', '+', '-', $, ')'
+
+            | $         | '('           | ')'       | '+', '-'          | '*'       | number        |
+expr        |           | add           |           |                   |           | add           |
+add         |           | mult add_1    |           |                   |           | mult add_1    |
+add_1       | e         |               | e         | add_op mult add_1 |           |               |
+add_op      |           |               |           | '+', '-'          |           |               |
+mult        |           | term mult_1   |           |                   |           | term mult_1   |
+mult_1      | e         |               | e         | e                 | '*' term  |               |
+term        |           | '(' expr ')'  |           |                   |           | number        |
