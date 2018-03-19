@@ -1,2 +1,2 @@
 @echo off
-tcc -run main.c
+tcc -run opal.c
