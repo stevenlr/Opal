@@ -1,5 +1,7 @@
 #include "lex.h"
 
+#include <stdbool.h>
+
 int64_t digit_values[256] =
 {
     ['0'] = 0,
@@ -128,6 +130,7 @@ void scan_string(lexer_t * l)
 
     while (*l->stream != '"' && *l->stream != '\0')
     {
+        // @Todo COpy string instead of overwriting. Make stream const again.
         if (*l->stream == '\\')
         {
             l->stream++;
@@ -146,6 +149,65 @@ void scan_string(lexer_t * l)
     l->token.string.last = current_write - 1;
     assert(*l->stream == '"' && "End of stream reached inside a string literal");
     l->stream++;
+}
+
+void scan_operator_2_1(lexer_t * l, char char2, token_type_t token2)
+{
+    if (l->stream[1] == char2)
+    {
+        l->token.type = token2;
+        l->stream += 2;
+    }
+    else
+    {
+        l->token.type = *l->stream;
+        l->stream++;
+    }
+}
+
+void scan_operator_2_2(lexer_t * l,
+        char char2_1, token_type_t token2_1,
+        char char2_2, token_type_t token2_2)
+{
+    if (l->stream[1] == char2_1)
+    {
+        l->token.type = token2_1;
+        l->stream += 2;
+    }
+    else
+    {
+        scan_operator_2_1(l, char2_2, token2_2);
+    }
+}
+
+void scan_operator_2_3(lexer_t * l,
+        char char2_1, token_type_t token2_1,
+        char char2_2, token_type_t token2_2,
+        char char2_3, token_type_t token2_3)
+{
+    if (l->stream[1] == char2_1)
+    {
+        l->token.type = token2_1;
+        l->stream += 2;
+    }
+    else
+    {
+        scan_operator_2_2(l,
+                char2_2, token2_2,
+                char2_3, token2_3);
+    }
+}
+
+bool try_scan_operator_3(lexer_t * l, const char * chars, token_type_t token_type)
+{
+    if (l->stream[1] != chars[0] || l->stream[2] != chars[1])
+    {
+        return false;
+    }
+
+    l->token.type = token_type;
+    l->stream += 3;
+    return true;
 }
 
 void next_token(lexer_t * l)
@@ -186,7 +248,68 @@ void next_token(lexer_t * l)
         scan_string(l);
         break;
 
-        default:
+    case '-':
+        scan_operator_2_3(l,
+                '>', TOKEN_TYPE_ARROW,
+                '=', TOKEN_TYPE_ASSIGN_SUB,
+                '-', TOKEN_TYPE_DEC);
+        break;
+
+    case '&':
+        scan_operator_2_2(l, '&', TOKEN_TYPE_LOGIC_AND, '=', TOKEN_TYPE_ASSIGN_AND);
+        break;
+
+    case '|':
+        scan_operator_2_2(l, '|', TOKEN_TYPE_LOGIC_OR, '=', TOKEN_TYPE_ASSIGN_OR);
+        break;
+
+    case '~':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_NOT);
+        break;
+
+    case '^':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_XOR);
+        break;
+
+    case '+':
+        scan_operator_2_2(l, '=', TOKEN_TYPE_ASSIGN_ADD, '+', TOKEN_TYPE_INC);
+        break;
+
+    case '*':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_MULT);
+        break;
+
+    case '/':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_DIV);
+        break;
+
+    case '%':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_MOD);
+        break;
+
+    case '=':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_EQ);
+        break;
+
+    case '!':
+        scan_operator_2_1(l, '=', TOKEN_TYPE_NE);
+        break;
+
+    case '<':
+        if (!try_scan_operator_3(l, "<=", TOKEN_TYPE_ASSIGN_SHL))
+        {
+            scan_operator_2_2(l, '=', TOKEN_TYPE_LE, '<', TOKEN_TYPE_SHL);
+        }
+        break;
+
+    case '>':
+        if (!try_scan_operator_3(l, ">=", TOKEN_TYPE_ASSIGN_SHR))
+        {
+            scan_operator_2_2(l, '=', TOKEN_TYPE_GE, '>', TOKEN_TYPE_SHR);
+        }
+        break;
+
+    default:
         {
             l->token.type = *l->stream++;
         }
@@ -283,5 +406,37 @@ void test_lexer()
 
         next_token(&lexer);
         assert(lexer.token.type == 0);
+    }
+
+    {
+        init_lexer(&lexer, "> >= >> >>= || &= & -- /= ->");
+        assert(lexer.token.type == '>');
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_GE);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_SHR);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_ASSIGN_SHR);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_LOGIC_OR);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_ASSIGN_AND);
+
+        next_token(&lexer);
+        assert(lexer.token.type == '&');
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_DEC);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_ASSIGN_DIV);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_ARROW);
     }
 }

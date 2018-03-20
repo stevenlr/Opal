@@ -13,6 +13,7 @@ type*[N] // array of pointers to type, N=0 valid
 ident = expr; // not an expr!!!
 expr;
 
+type a = b;
 if (expr) {}
 else if (expr) {}
 else {}
@@ -23,6 +24,7 @@ for_rng: name (ident in expr..expr) {}
 for_seq: name (ident in expr, length) {}
 do: name {} while (expr);
 break name; // name optional
+continue name; // name optional
 switch (expr) {
     term, term..term, term -> {}
     otherwise -> {}
@@ -31,6 +33,7 @@ return expr;
 defer {};
 fn name(ident, ident : type, ident, ident : type) : type {}
 fn name(ident, ident : type, ident, ident : type) : type; // extern
+fn (ident, ident : type, ...) -> type;
 
 struct Name : parent {
     ident, ident, ident : type
@@ -44,6 +47,13 @@ enum Name : type {
     D = expr
 }
 
+union Name {
+    ident : type
+    ident : type
+    ident : struct {...}
+    ident : union {...}
+}
+
 import folder1.folder2;
 
 @offset(n)
@@ -52,7 +62,7 @@ import folder1.folder2;
 @public
 
 size_of(type)
-cast(type)
+(:type) // cast
 
 val.field
 ptr.field // no -> yay
