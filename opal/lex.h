@@ -59,8 +59,6 @@ typedef enum token_type_t
     //TOKEN_TYPE_KW_UNION,
     //TOKEN_TYPE_KW_ENUM,
     //TOKEN_TYPE_KW_TYPE,
-    
-    END
 } token_type_t;
 
 typedef struct token_t

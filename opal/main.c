@@ -10,6 +10,7 @@
 
 int main(int argc, char * argv[])
 {
+    test_common();
     test_lexer();
     return 0;
 }
