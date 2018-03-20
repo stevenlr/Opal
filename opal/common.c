@@ -1,6 +1,10 @@
+#include "common.h"
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
+
+#include "common.h"
 
 void * xmalloc(uint64_t size)
 {
@@ -60,26 +64,33 @@ typedef struct intern_string_t
     const char * str;
 } intern_string_t; 
 
-intern_string_t * intern_string_list = NULL;
+sb_t(intern_string_t) intern_string_list = NULL;
 
-const char * intern_string(const char * str)
+// @Todo Use some kind of memory arena
+const char * intern_string_range(const char * first, const char * last)
 {
-    uint64_t length = strlen(str);
+    uint64_t length = last - first + 1;
 
     for (intern_string_t * it = intern_string_list;
             it != sb_end(intern_string_list);
             ++it)
     {
-        if (it->length == length && strcmp(it->str, str) == 0)
+        if (it->length == length && strncmp(it->str, first, length) == 0)
         {
             return it->str;
         }
     }
 
     char * new_str = xmalloc(length + 1);
-    memcpy(new_str, str, length + 1);
+    memcpy(new_str, first, length);
+    new_str[length] = '\0';
     sb_push(intern_string_list, (intern_string_t){ length, new_str });
     return new_str;
+}
+
+const char * intern_string(const char * str)
+{
+    return intern_string_range(str, str + strlen(str) - 1);
 }
 
 void test_intern_string()

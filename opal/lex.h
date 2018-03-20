@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "common.h"
 
 // @Todo Keywords
 // @Todo Floating point numbers
@@ -67,22 +68,22 @@ typedef struct token_t
     union
     {
         uint64_t integer;
-        char * identifier;
+        const char * identifier;
         char character;
         struct
         {
-            char * first;
-            char * last;
+            sb_t(const char) str;
+            uint64_t length;
         } string;
     };
 } token_t;
 
 typedef struct lexer_t
 {
-    char * stream;
+    const char * stream;
     token_t token;
 } lexer_t;
 
 void next_token(lexer_t * l);
-void init_lexer(lexer_t * l, char * input);
+void init_lexer(lexer_t * l, const char * input);
 void test_lexer();

@@ -1,6 +1,9 @@
 #include "lex.h"
 
 #include <stdbool.h>
+#include <ctype.h>
+#include <string.h>
+#include <assert.h>
 
 int64_t digit_values[256] =
 {
@@ -93,9 +96,7 @@ void scan_identifier(lexer_t * l)
     }
 
     uint64_t length = l->stream - start;
-    l->token.identifier = (char *)xmalloc(length + 1);
-    memcpy(l->token.identifier, start, length); // @Todo Use intern string
-    l->token.identifier[length] = '\0';
+    l->token.identifier = intern_string_range(start, l->stream - 1);
 } 
 
 void scan_character(lexer_t * l)
@@ -124,31 +125,33 @@ void scan_string(lexer_t * l)
 {
     l->token.type = TOKEN_TYPE_STRING; // @Todo Parse \x.. and \0..
     l->stream++;
-    l->token.string.first = l->stream;
 
-    char * current_write = l->stream;
+    char * output_string = NULL;
+    uint64_t length = 0;
 
     while (*l->stream != '"' && *l->stream != '\0')
     {
-        // @Todo COpy string instead of overwriting. Make stream const again.
         if (*l->stream == '\\')
         {
             l->stream++;
             assert((escaped_string_chars[*l->stream] != 0 || l->stream == '\0') && "Invalid escaped character in string literal");
-            *current_write = escaped_string_chars[*l->stream];
+            sb_push(output_string, escaped_string_chars[*l->stream]);
         }
         else
         {
-            *current_write = *l->stream;
+            sb_push(output_string, *l->stream);
         }
 
-        current_write++;
         l->stream++;
+        length++;
     }
 
-    l->token.string.last = current_write - 1;
     assert(*l->stream == '"' && "End of stream reached inside a string literal");
     l->stream++;
+
+    sb_push(output_string, '\0');
+    l->token.string.str = output_string;
+    l->token.string.length = length;
 }
 
 void scan_operator_2_1(lexer_t * l, char char2, token_type_t token2)
@@ -317,7 +320,7 @@ void next_token(lexer_t * l)
     }
 }
 
-void init_lexer(lexer_t * l, char * input)
+void init_lexer(lexer_t * l, const char * input)
 {
     assert(l);
     assert(input);
@@ -396,13 +399,13 @@ void test_lexer()
     {
         init_lexer(&lexer, "  \"hello world \\\\ \\\" \n \\n\" \"abc\" ");
         assert(lexer.token.type == TOKEN_TYPE_STRING);
-        assert(lexer.token.string.last - lexer.token.string.first + 1 == 19);
-        assert(memcmp("hello world \\ \" \n \n", lexer.token.string.first, 19) == 0);
+        assert(lexer.token.string.length == 19);
+        assert(strcmp("hello world \\ \" \n \n", lexer.token.string.str) == 0);
 
         next_token(&lexer);
         assert(lexer.token.type == TOKEN_TYPE_STRING);
-        assert(lexer.token.string.last - lexer.token.string.first + 1 == 3);
-        assert(memcmp("abc", lexer.token.string.first, 3) == 0);
+        assert(lexer.token.string.length == 3);
+        assert(strcmp("abc", lexer.token.string.str) == 0);
 
         next_token(&lexer);
         assert(lexer.token.type == 0);
