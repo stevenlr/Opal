@@ -47,6 +47,38 @@ char escaped_string_chars[256] =
     ['"'] = '"'
 };
 
+bool keywords_initilized = false;
+const char * keywords[TOKEN_TYPE_KW_END_ - TOKEN_TYPE_KW_FIRST_];
+
+#define REGISTER_KEYWORD(NAME, name) keywords[TOKEN_TYPE_KW_##NAME - TOKEN_TYPE_KW_FIRST_] = intern_string(name);
+void init_keywords()
+{
+    if (keywords_initilized)
+    {
+        return;
+    }
+
+    REGISTER_KEYWORD(VAR, "var");
+    REGISTER_KEYWORD(CONST, "const");
+    REGISTER_KEYWORD(LET, "let");
+    REGISTER_KEYWORD(IF, "if");
+    REGISTER_KEYWORD(ELSE, "else");
+    REGISTER_KEYWORD(WHILE, "while");
+    REGISTER_KEYWORD(FOR, "for");
+    REGISTER_KEYWORD(SWITCH, "switch");
+    REGISTER_KEYWORD(OTHERWISE, "otherwise");
+    REGISTER_KEYWORD(RETURN, "return");
+    REGISTER_KEYWORD(FN, "fn");
+    REGISTER_KEYWORD(STRUCT, "struct");
+    REGISTER_KEYWORD(UNION, "union");
+    REGISTER_KEYWORD(ENUM, "enum");
+    REGISTER_KEYWORD(TYPE, "type");
+    REGISTER_KEYWORD(CONTINUE, "continue");
+    REGISTER_KEYWORD(BREAK, "break");
+    keywords_initilized = true;
+}
+#undef REGISTER_KEYWORD
+
 void scan_integer(lexer_t * l)
 {
     l->token.type = TOKEN_TYPE_INTEGER;
@@ -97,6 +129,15 @@ void scan_identifier(lexer_t * l)
 
     uint64_t length = l->stream - start;
     l->token.identifier = intern_string_range(start, l->stream - 1);
+
+    for (int32_t kw = TOKEN_TYPE_KW_FIRST_; kw < TOKEN_TYPE_KW_END_; ++kw)
+    {
+        if (l->token.identifier == keywords[kw - TOKEN_TYPE_KW_FIRST_])
+        {
+            l->token.type = kw;
+            break;
+        }
+    }
 } 
 
 void scan_character(lexer_t * l)
@@ -126,7 +167,7 @@ void scan_string(lexer_t * l)
     l->token.type = TOKEN_TYPE_STRING; // @Todo Parse \x.. and \0..
     l->stream++;
 
-    char * output_string = NULL;
+    sb_t(char) output_string = NULL;
     uint64_t length = 0;
 
     while (*l->stream != '"' && *l->stream != '\0')
@@ -326,6 +367,7 @@ void init_lexer(lexer_t * l, const char * input)
     assert(input);
     assert(input[strlen(input)] == '\0');
 
+    init_keywords();
     l->stream = input;
     next_token(l);
 }
@@ -441,5 +483,22 @@ void test_lexer()
 
         next_token(&lexer);
         assert(lexer.token.type == TOKEN_TYPE_ARROW);
+    }
+
+    {
+        init_lexer(&lexer, "if else elseif while const");
+        assert(lexer.token.type == TOKEN_TYPE_KW_IF);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_KW_ELSE);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_IDENTIFIER);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_KW_WHILE);
+
+        next_token(&lexer);
+        assert(lexer.token.type == TOKEN_TYPE_KW_CONST);
     }
 }
