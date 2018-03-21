@@ -1,0 +1,30 @@
+size_of
+align_of
+cast
+import
+anonymous aggregates in aggregates
+name list in aggregates (same type)
+name list in function definitions (same type)
+external function declaration
+enum inheritance
+aggregate inheritance
+loop
+for_range
+for_seq
+do while
+named loops & break/continue
+multi-term switch case
+range switch case
+defer
+comments
+nested multiline comments
+constructors/initializers
+sparse (named) aggregate initializer
+sparse array initializer
+attributes
+@offset (aggregate fields)
+@align (aggregate fields)
+@pack (aggregates)
+@public (decls)
+rtti
+trait/impl

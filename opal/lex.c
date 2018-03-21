@@ -60,7 +60,6 @@ void init_keywords()
 
     REGISTER_KEYWORD(VAR, "var");
     REGISTER_KEYWORD(CONST, "const");
-    REGISTER_KEYWORD(LET, "let");
     REGISTER_KEYWORD(IF, "if");
     REGISTER_KEYWORD(ELSE, "else");
     REGISTER_KEYWORD(WHILE, "while");

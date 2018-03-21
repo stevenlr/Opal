@@ -1,0 +1,46 @@
+groups      () {} []
+unary       + - ! ~ & *
+mult        * / % & << >>
+add         + - | ^
+cmp         < <= > >= != ==
+and         &&
+or          ||
+tern        ?:
+
+INTEGER_TYPE =  ('u' | 'i') ('8' | '16' | '32' | '64')
+
+decl =            'enum' enum_decl
+                | 'struct' aggregate_decl
+                | 'union' aggregate_decl
+                | 'var' var_decl
+                | 'const' const_decl
+                | 'type' type_decl
+                | 'fn' fn_decl
+
+var_decl =      NAME ':' type ('=' expr)? ';'
+
+const_decl =    NAME ':' type '=' expr ';'
+
+type_decl =     NAME '=' type ';'
+
+fn_param =      NAME ':' type
+fn_param_list = fn_param (',' fn_param)*
+fn_decl =       NAME '(' fn_param_list? ')' (':' type)? stmt_block
+
+enum_item =     NAME ('=' expr)?
+enum_items =    enum_item (',' enum_item)* ','?
+enum_decl =     NAME ':' INTEGER_TYPE '{' enum_items? '}'
+
+aggregate_item =    NAME ':' type ';'
+aggregate_decl =    NAME '{' aggregate_item* '}'
+
+base_type =       NAME
+                | '(' type ')'
+                | 'fn' '(' type_list? ')' (':' type)?
+type =          base_type ('[' expr ']' | '*')*
+type_list =     type (',' type)*
+
+stmt_block =    '{' stmt* '}'
+
+stmt
+expr
