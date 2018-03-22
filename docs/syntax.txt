@@ -71,9 +71,8 @@ operand =         NAME
                 | '(' expr ')'
                 | '(' ':' type ')' '{' expr_list? '}'
 
-suboperand =    operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
-unary_right_e =   'cast' '(' ':' type ')' unary_right_e
-                | suboperand
+invoke_e =      operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
+unary_right_e =   'cast' '(' ':' type ')' unary_right_e | invoke_e
 unary_left_e =  [+ - ! ~ & *] unary_left_e | unary_right_e
 mult_e =        unary_left_e ([* / % & << >>] unary_left_e)*
 add_e =         mult_e ([+ - | ^] mult_e)*
