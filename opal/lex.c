@@ -74,6 +74,7 @@ void init_keywords()
     REGISTER_KEYWORD(TYPE, "type");
     REGISTER_KEYWORD(CONTINUE, "continue");
     REGISTER_KEYWORD(BREAK, "break");
+    REGISTER_KEYWORD(CAST, "cast");
     keywords_initilized = true;
 }
 #undef REGISTER_KEYWORD
@@ -141,7 +142,7 @@ void scan_identifier(lexer_t * l)
 
 void scan_character(lexer_t * l)
 {
-    l->token.type = TOKEN_TYPE_CHARACTER; // @Todo Parse \x.. and \0..
+    l->token.type = TOKEN_TYPE_INTEGER; // @Todo Parse \x.. and \0..
     l->stream++;
     assert(*l->stream != '\'' && "Invalid character literal");
 
@@ -149,11 +150,11 @@ void scan_character(lexer_t * l)
     {
         *l->stream++;
         assert((escaped_character_chars[*l->stream] != 0 || *l->stream == '\0') && "Invalid escaped character literal");
-        l->token.character = escaped_character_chars[*l->stream];
+        l->token.integer = escaped_character_chars[*l->stream];
     }
     else
     {
-        l->token.character = *l->stream;
+        l->token.integer = *l->stream;
     }
 
     *l->stream++;
@@ -418,19 +419,19 @@ void test_lexer()
 
     {
         init_lexer(&lexer, " '@' '\\'' '\\\\' '\\n'");
-        assert(lexer.token.type == TOKEN_TYPE_CHARACTER);
+        assert(lexer.token.type == TOKEN_TYPE_INTEGER);
         assert(lexer.token.character == '@');
 
         next_token(&lexer);
-        assert(lexer.token.type == TOKEN_TYPE_CHARACTER);
+        assert(lexer.token.type == TOKEN_TYPE_INTEGER);
         assert(lexer.token.character == '\'');
 
         next_token(&lexer);
-        assert(lexer.token.type == TOKEN_TYPE_CHARACTER);
+        assert(lexer.token.type == TOKEN_TYPE_INTEGER);
         assert(lexer.token.character == '\\');
 
         next_token(&lexer);
-        assert(lexer.token.type == TOKEN_TYPE_CHARACTER);
+        assert(lexer.token.type == TOKEN_TYPE_INTEGER);
         assert(lexer.token.character == '\n');
 
         next_token(&lexer);

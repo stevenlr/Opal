@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include "common.h"
 
-// @Todo Keywords
 // @Todo Floating point numbers
 typedef enum token_type_t
 {
@@ -13,7 +12,6 @@ typedef enum token_type_t
     // Literals
     TOKEN_TYPE_INTEGER,
     TOKEN_TYPE_IDENTIFIER,
-    TOKEN_TYPE_CHARACTER,
     TOKEN_TYPE_STRING,
 
     // Operators
@@ -59,6 +57,7 @@ typedef enum token_type_t
     TOKEN_TYPE_KW_STRUCT,
     TOKEN_TYPE_KW_UNION,
     TOKEN_TYPE_KW_ENUM,
+    TOKEN_TYPE_KW_CAST,
     TOKEN_TYPE_KW_TYPE,
     TOKEN_TYPE_KW_CONTINUE,
     TOKEN_TYPE_KW_BREAK,

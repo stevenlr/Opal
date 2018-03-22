@@ -1,6 +1,5 @@
 size_of
 align_of
-cast
 import
 anonymous aggregates in aggregates
 name list in aggregates (same type)

@@ -1,5 +1,7 @@
-groups      () {} []
-unary       + - ! ~ & *
+operand     literal (expr) (:type){expr, expr, expr}
+suboperand  () [] .
+unary r     cast(:type) operand
+unary l     + - ! ~ & *
 mult        * / % & << >>
 add         + - | ^
 cmp         < <= > >= != ==
@@ -12,16 +14,15 @@ INTEGER_TYPE =  ('u' | 'i') ('8' | '16' | '32' | '64')
 decl =            'enum' enum_decl
                 | 'struct' aggregate_decl
                 | 'union' aggregate_decl
-                | 'var' var_decl
-                | 'const' const_decl
-                | 'type' type_decl
+                | 'var' var_decl ';'
+                | 'const' const_decl ';'
+                | 'type' type_decl ';'
                 | 'fn' fn_decl
 
-var_decl =      NAME ':' type ('=' expr)? ';'
+var_decl =      NAME ':' type ('=' expr)?
+const_decl =    NAME ':' type '=' expr
 
-const_decl =    NAME ':' type '=' expr ';'
-
-type_decl =     NAME '=' type ';'
+type_decl =     NAME '=' type
 
 fn_param =      NAME ':' type
 fn_param_list = fn_param (',' fn_param)*
@@ -40,7 +41,44 @@ base_type =       NAME
 type =          base_type ('[' expr ']' | '*')*
 type_list =     type (',' type)*
 
-stmt_block =    '{' stmt* '}'
+switch_value =  INTEGER | NAME
+switch_value_list = switch_value (',' switch_value)*
+switch_case =   ('otherwise' | switch_value_list) '->' stmt_block
+switch_block =  '{' switch_case* '}'
 
-stmt
-expr
+stmt_simple =     'var' var_decl
+                | 'const' const_decl
+                | expr ('++' | '--' | [= ...] expr)?
+stmt_simple_list = stmt_simple (',' stmt_simple)*
+stmt_block =    '{' stmt* '}'
+stmt_assign =   
+stmt =            'if' '(' expr ')' stmt_block ('else' 'if' '(' expr ')' stmt_block)* ('else' stmt_block)?
+                | 'while' '(' expr ')' stmt_block
+                | 'for' '(' stmt_simple_list ';' expr ';' stmt_simple_list ')' stmt_block
+                | 'switch' '(' expr ')' switch_block
+                | 'return' expr ';'
+                | 'continue' ';'
+                | 'break' ';'
+                | stmt_simple ';'
+                | stmt_block
+
+expr_list =     expr (',' expr)*
+
+operand =         NAME
+                | STRING
+                | INTEGER
+                | FLOAT
+                | '(' expr ')'
+                | '(' ':' type ')' '{' expr_list? '}'
+
+suboperand =    operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
+unary_right_e =   'cast' '(' ':' type ')' unary_right_e
+                | suboperand
+unary_left_e =  [+ - ! ~ & *] unary_left_e | unary_right_e
+mult_e =        unary_left_e ([* / % & << >>] unary_left_e)*
+add_e =         mult_e ([+ - | ^] mult_e)*
+cmp_e =         add_e ([< <= > >= != ==] add_e)*
+and_e =         cmp_e ('&&' cmp_e)*
+or_e =          and_e ('||' and_e)*
+tern_e =        or_expr ('?' tern_e ':' tern_e)?
+expr =          tern_e
