@@ -56,7 +56,7 @@ stmt =            'if' '(' expr ')' stmt_block ('else' 'if' '(' expr ')' stmt_bl
                 | 'while' '(' expr ')' stmt_block
                 | 'for' '(' stmt_simple_list ';' expr ';' stmt_simple_list ')' stmt_block
                 | 'switch' '(' expr ')' switch_block
-                | 'return' expr ';'
+                | 'return' expr? ';'
                 | 'continue' ';'
                 | 'break' ';'
                 | stmt_simple ';'
