@@ -41,7 +41,7 @@ void * _sb_grow_impl(void * b, int32_t increment, uint64_t value_size)
     return new_raw + 2;
 }
 
-void test_dyn_buf()
+void test_dyn_buf(void)
 {
     int64_t * array = NULL;
 
@@ -93,7 +93,7 @@ const char * intern_string(const char * str)
     return intern_string_range(str, str + strlen(str) - 1);
 }
 
-void test_intern_string()
+void test_intern_string(void)
 {
     char a[] = "my first string";
     char b[] = "my first";
@@ -105,7 +105,7 @@ void test_intern_string()
     assert(intern_string(a) != intern_string(c));
 }
 
-void test_common()
+void test_common(void)
 {
     test_dyn_buf();
     test_intern_string();

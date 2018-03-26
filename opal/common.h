@@ -23,5 +23,5 @@ void * _sb_grow_impl(void * b, int32_t increment, uint64_t value_size);
 const char * intern_string(const char * str);
 const char * intern_string_range(const char * first, const char * last);
 
-void test_common();
+void test_common(void);
 

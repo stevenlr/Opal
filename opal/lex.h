@@ -88,4 +88,4 @@ typedef struct lexer_t
 
 void next_token(lexer_t * l);
 void init_lexer(lexer_t * l, const char * input);
-void test_lexer();
+void test_lexer(void);

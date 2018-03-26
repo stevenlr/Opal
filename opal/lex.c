@@ -51,7 +51,7 @@ bool keywords_initilized = false;
 const char * keywords[TOKEN_TYPE_KW_END_ - TOKEN_TYPE_KW_FIRST_];
 
 #define REGISTER_KEYWORD(NAME, name) keywords[TOKEN_TYPE_KW_##NAME - TOKEN_TYPE_KW_FIRST_] = intern_string(name);
-void init_keywords()
+void init_keywords(void)
 {
     if (keywords_initilized)
     {
@@ -372,7 +372,7 @@ void init_lexer(lexer_t * l, const char * input)
     next_token(l);
 }
 
-void test_lexer()
+void test_lexer(void)
 {
     lexer_t lexer;
 

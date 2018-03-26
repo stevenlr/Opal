@@ -11,6 +11,8 @@ tern        ?:
 
 INTEGER_TYPE =  ('u' | 'i') ('8' | '16' | '32' | '64')
 
+document = decl*
+
 decl =            'enum' enum_decl
                 | 'struct' aggregate_decl
                 | 'union' aggregate_decl
@@ -72,9 +74,9 @@ operand =         NAME
                 | '(' ':' type ')' '{' expr_list? '}'
 
 invoke_e =      operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
-unary_right_e =   'cast' '(' ':' type ')' unary_right_e | invoke_e
-unary_left_e =  [+ - ! ~ & *] unary_left_e | unary_right_e
-mult_e =        unary_left_e ([* / % & << >>] unary_left_e)*
+cast_e =   'cast' '(' ':' type ')' cast_e | invoke_e
+unary_e =  [+ - ! ~ & *] unary_e | cast_e
+mult_e =        unary_e ([* / % & << >>] unary_e)*
 add_e =         mult_e ([+ - | ^] mult_e)*
 cmp_e =         add_e ([< <= > >= != ==] add_e)*
 and_e =         cmp_e ('&&' cmp_e)*
