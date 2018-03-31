@@ -1,4 +1,5 @@
 #include "main.c"
 #include "common.c"
 #include "lex.c"
+#include "ast.c"
 #include "parse.c"

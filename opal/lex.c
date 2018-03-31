@@ -195,7 +195,8 @@ void scan_string(lexer_t * l)
     l->token.string.length = length;
 }
 
-void scan_operator_2_1(lexer_t * l, char char2, token_type_t token2)
+void scan_operator_2_1(lexer_t * l, token_type_t default_type,
+        char char2, token_type_t token2)
 {
     if (l->stream[1] == char2)
     {
@@ -204,12 +205,12 @@ void scan_operator_2_1(lexer_t * l, char char2, token_type_t token2)
     }
     else
     {
-        l->token.type = *l->stream;
+        l->token.type = default_type;
         l->stream++;
     }
 }
 
-void scan_operator_2_2(lexer_t * l,
+void scan_operator_2_2(lexer_t * l, token_type_t default_type,
         char char2_1, token_type_t token2_1,
         char char2_2, token_type_t token2_2)
 {
@@ -220,11 +221,11 @@ void scan_operator_2_2(lexer_t * l,
     }
     else
     {
-        scan_operator_2_1(l, char2_2, token2_2);
+        scan_operator_2_1(l, default_type, char2_2, token2_2);
     }
 }
 
-void scan_operator_2_3(lexer_t * l,
+void scan_operator_2_3(lexer_t * l, token_type_t default_type,
         char char2_1, token_type_t token2_1,
         char char2_2, token_type_t token2_2,
         char char2_3, token_type_t token2_3)
@@ -236,7 +237,7 @@ void scan_operator_2_3(lexer_t * l,
     }
     else
     {
-        scan_operator_2_2(l,
+        scan_operator_2_2(l, default_type,
                 char2_2, token2_2,
                 char2_3, token2_3);
     }
@@ -293,63 +294,80 @@ void next_token(lexer_t * l)
         break;
 
     case '-':
-        scan_operator_2_3(l,
+        scan_operator_2_3(l, TOKEN_TYPE_MINUS,
                 '>', TOKEN_TYPE_ARROW,
                 '=', TOKEN_TYPE_ASSIGN_SUB,
                 '-', TOKEN_TYPE_DEC);
         break;
 
     case '&':
-        scan_operator_2_2(l, '&', TOKEN_TYPE_LOGIC_AND, '=', TOKEN_TYPE_ASSIGN_AND);
+        scan_operator_2_2(l, TOKEN_TYPE_AND,
+                '&', TOKEN_TYPE_LOGIC_AND,
+                '=', TOKEN_TYPE_ASSIGN_AND);
         break;
 
     case '|':
-        scan_operator_2_2(l, '|', TOKEN_TYPE_LOGIC_OR, '=', TOKEN_TYPE_ASSIGN_OR);
+        scan_operator_2_2(l, TOKEN_TYPE_OR,
+                '|', TOKEN_TYPE_LOGIC_OR,
+                '=', TOKEN_TYPE_ASSIGN_OR);
         break;
 
     case '~':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_NOT);
+        scan_operator_2_1(l, TOKEN_TYPE_NOT,
+                '=', TOKEN_TYPE_ASSIGN_NOT);
         break;
 
     case '^':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_XOR);
+        scan_operator_2_1(l, TOKEN_TYPE_XOR,
+                '=', TOKEN_TYPE_ASSIGN_XOR);
         break;
 
     case '+':
-        scan_operator_2_2(l, '=', TOKEN_TYPE_ASSIGN_ADD, '+', TOKEN_TYPE_INC);
+        scan_operator_2_2(l, TOKEN_TYPE_PLUS,
+                '=', TOKEN_TYPE_ASSIGN_ADD,
+                '+', TOKEN_TYPE_INC);
         break;
 
     case '*':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_MULT);
+        scan_operator_2_1(l, TOKEN_TYPE_MULT,
+                '=', TOKEN_TYPE_ASSIGN_MULT);
         break;
 
     case '/':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_DIV);
+        scan_operator_2_1(l, TOKEN_TYPE_DIV,
+                '=', TOKEN_TYPE_ASSIGN_DIV);
         break;
 
     case '%':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_ASSIGN_MOD);
+        scan_operator_2_1(l, TOKEN_TYPE_MOD,
+                '=', TOKEN_TYPE_ASSIGN_MOD);
         break;
 
     case '=':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_EQ);
+        scan_operator_2_1(l, TOKEN_TYPE_ASSIGN,
+                '=', TOKEN_TYPE_EQ);
         break;
 
     case '!':
-        scan_operator_2_1(l, '=', TOKEN_TYPE_NE);
+        scan_operator_2_1(l, TOKEN_TYPE_LOGIC_NOT,
+                '=', TOKEN_TYPE_NE);
         break;
 
     case '<':
         if (!try_scan_operator_3(l, "<=", TOKEN_TYPE_ASSIGN_SHL))
         {
-            scan_operator_2_2(l, '=', TOKEN_TYPE_LE, '<', TOKEN_TYPE_SHL);
+            scan_operator_2_2(l, TOKEN_TYPE_LT,
+                    '=', TOKEN_TYPE_LE, 
+                    '<', TOKEN_TYPE_SHL);
         }
         break;
 
     case '>':
         if (!try_scan_operator_3(l, ">=", TOKEN_TYPE_ASSIGN_SHR))
         {
-            scan_operator_2_2(l, '=', TOKEN_TYPE_GE, '>', TOKEN_TYPE_SHR);
+            scan_operator_2_2(l, TOKEN_TYPE_GT,
+                    '=', TOKEN_TYPE_GE, 
+                    '>', TOKEN_TYPE_SHR);
         }
         break;
 
@@ -382,7 +400,7 @@ void test_lexer(void)
         assert(strcmp(lexer.token.identifier, "hello") == 0);
 
         next_token(&lexer);
-        assert(lexer.token.type == '+');
+        assert(lexer.token.type == TOKEN_TYPE_PLUS);
 
         next_token(&lexer);
         assert(lexer.token.type == TOKEN_TYPE_INTEGER);
@@ -455,7 +473,7 @@ void test_lexer(void)
 
     {
         init_lexer(&lexer, "> >= >> >>= || &= & -- /= ->");
-        assert(lexer.token.type == '>');
+        assert(lexer.token.type == TOKEN_TYPE_GT);
 
         next_token(&lexer);
         assert(lexer.token.type == TOKEN_TYPE_GE);
@@ -473,7 +491,7 @@ void test_lexer(void)
         assert(lexer.token.type == TOKEN_TYPE_ASSIGN_AND);
 
         next_token(&lexer);
-        assert(lexer.token.type == '&');
+        assert(lexer.token.type == TOKEN_TYPE_AND);
 
         next_token(&lexer);
         assert(lexer.token.type == TOKEN_TYPE_DEC);

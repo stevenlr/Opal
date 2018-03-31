@@ -290,3 +290,7 @@ typedef struct ast_decl_t
     };
 } ast_decl_t;
 
+ast_decl_t * ast_new_decl(ast_decl_type_t type);
+ast_typespec_t * ast_new_typespec(ast_typespec_type_t type);
+ast_expr_t * ast_new_expr(ast_expr_type_t type);
+

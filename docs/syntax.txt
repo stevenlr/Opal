@@ -71,11 +71,11 @@ operand =         NAME
                 | INTEGER
                 | FLOAT
                 | '(' expr ')'
-                | '(' ':' type ')' '{' expr_list? '}'
+                | type? '{' expr_list? '}'
+                | cast '(' type ',' expr ')'
 
 invoke_e =      operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
-cast_e =   'cast' '(' ':' type ')' cast_e | invoke_e
-unary_e =  [+ - ! ~ & *] unary_e | cast_e
+unary_e =       [+ - ! ~ & *]* invoke_e
 mult_e =        unary_e ([* / % & << >>] unary_e)*
 add_e =         mult_e ([+ - | ^] mult_e)*
 cmp_e =         add_e ([< <= > >= != ==] add_e)*
