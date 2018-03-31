@@ -24,19 +24,27 @@ void expect_token(token_type_t type)
 bool is_token_cmp_op(void)
 {
     token_type_t type = l.token.type;
-    return type > TOKEN_TYPE_CMP_START_ && type < TOKEN_TYPE_CMP_END_; 
+    return type > TOKEN_TYPE_CMP_START_ && type < TOKEN_TYPE_CMP_END_;
 }
 
 bool is_token_add_op(void)
 {
     token_type_t type = l.token.type;
-    return type > TOKEN_TYPE_ADD_START_ && type < TOKEN_TYPE_ADD_END_; 
+    return type > TOKEN_TYPE_ADD_START_ && type < TOKEN_TYPE_ADD_END_;
 }
 
 bool is_token_mult_op(void)
 {
     token_type_t type = l.token.type;
-    return type > TOKEN_TYPE_MULT_START_ && type < TOKEN_TYPE_MULT_END_; 
+    return type > TOKEN_TYPE_MULT_START_ && type < TOKEN_TYPE_MULT_END_;
+}
+
+bool is_token_invoke_op(void)
+{
+    token_type_t op = l.token.type;
+    return op == TOKEN_TYPE_PARENTHESIS_OPEN 
+        || op == TOKEN_TYPE_BRACKET_OPEN
+        || op == TOKEN_TYPE_DOT;   
 }
 
 bool is_token_unary_op(void)
@@ -50,29 +58,116 @@ bool is_token_unary_op(void)
         || op == TOKEN_TYPE_MULT;
 }
 
-// expr_list =     expr (',' expr)*
-//
-// operand =         NAME
-//                 | STRING
-//                 | INTEGER
-//                 | FLOAT
-//                 | '(' expr ')'
+// operand =         FLOAT
 //                 | type? '{' expr_list? '}'
 //                 | cast '(' type ',' expr ')'
-// 
-// invoke_e =      operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
+
+// @Todo Write grammar for indexed and named compound
+ast_expr_t * parse_expr(void);
+
+ast_expr_t * parse_expr_operand(void)
+{
+    if (is_token(TOKEN_TYPE_INTEGER))
+    {
+        ast_expr_t * expr = ast_new_expr(AST_EXPR_INTEGER);
+        expr->int_value = l.token.integer;
+        next_token(&l);
+        return expr;
+    }
+    else if (is_token(TOKEN_TYPE_IDENTIFIER))
+    {
+        ast_expr_t * expr = ast_new_expr(AST_EXPR_NAME);
+        expr->name = l.token.identifier;
+        next_token(&l);
+        return expr;
+    }
+    if (is_token(TOKEN_TYPE_STRING))
+    {
+        ast_expr_t * expr = ast_new_expr(AST_EXPR_STRING);
+        expr->string_value.str = l.token.string.str;
+        expr->string_value.length = l.token.string.length;
+        next_token(&l);
+        return expr;
+    }
+    if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
+    {
+        next_token(&l);
+        ast_expr_t * expr = parse_expr();
+        expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+        next_token(&l);
+        return expr;
+    }
+    // @Todo handle floats, compounds, and cast
+
+    printf("Invalid operand\n");
+    return NULL;
+}
+
+sb_t(ast_expr_t *) parse_expr_list(void)
+{
+    sb_t(ast_expr_t *) expr_list = NULL;
+    while (true)
+    {
+        ast_expr_t * expr = parse_expr();
+        sb_push(expr_list, expr);
+        if (!is_token(TOKEN_TYPE_COMMA)) { break; }
+        next_token(&l);
+    }
+    return expr_list;
+}
 
 ast_expr_t * parse_expr_invoke(void)
 {
-    // @Todo
-    return NULL;
+    ast_expr_t * expr = parse_expr_operand();
+    while (is_token_invoke_op())
+    {
+        if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
+        {
+            next_token(&l);
+            sb_t(ast_expr_t *) exprs = parse_expr_list();
+            ast_expr_t * args_expr = ast_new_expr(AST_EXPR_INVOKE);
+            args_expr->invoke.expr = expr;
+            args_expr->invoke.args = exprs;
+            args_expr->invoke.num_args = sb_len(exprs);
+            expr = args_expr;
+            expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+            next_token(&l);
+        }
+        else if (is_token(TOKEN_TYPE_BRACKET_OPEN))
+        {
+            next_token(&l);
+            ast_expr_t * outer = ast_new_expr(AST_EXPR_INDEX);
+            outer->index.expr = expr;
+            outer->index.index_expr = parse_expr();
+            expr = outer;
+            expect_token(TOKEN_TYPE_BRACKET_CLOSE);
+            next_token(&l);
+        }
+        else if (is_token(TOKEN_TYPE_DOT))
+        {
+            next_token(&l);
+            expect_token(TOKEN_TYPE_IDENTIFIER);
+            ast_expr_t * outer = ast_new_expr(AST_EXPR_FIELD);
+            outer->field.expr = expr;
+            outer->field.name = l.token.identifier;
+            expr = outer;
+            next_token(&l);
+        }
+        else
+        {
+            printf("Unexpected token\n");
+            exit(1);
+        }
+    }
+    
+    return expr;
 }
 
 ast_expr_t * parse_expr_unary(void)
 {
     ast_expr_t * expr = NULL;
     ast_expr_t * current = NULL;
-    
+
     while (is_token_unary_op())
     {
         token_type_t op = l.token.type;
@@ -80,7 +175,7 @@ ast_expr_t * parse_expr_unary(void)
         ast_expr_t * unary = ast_new_expr(AST_EXPR_UNARY_OP);
         unary->unary.op = op;
         unary->unary.expr = NULL;
-        
+
         if (current) { current->unary.expr = unary; }
         if (!expr) { expr = unary; }
 
@@ -175,7 +270,7 @@ ast_expr_t * parse_expr_or(void)
 ast_expr_t * parse_expr_tern(void)
 {
     ast_expr_t * expr = parse_expr_or();
-    if (is_token('?'))
+    if (is_token(TOKEN_TYPE_QUESTION))
     {
         ast_expr_t * tern_expr = ast_new_expr(AST_EXPR_TERNARY);
         tern_expr->ternary.condition = expr;
@@ -183,7 +278,7 @@ ast_expr_t * parse_expr_tern(void)
 
         next_token(&l);
         tern_expr->ternary.then_expr = parse_expr_tern();
-        expect_token(':');
+        expect_token(TOKEN_TYPE_COLON);
 
         next_token(&l);
         tern_expr->ternary.else_expr = parse_expr_tern();
@@ -207,11 +302,11 @@ ast_typespec_t * parse_base_type_typespec(void)
         typespec->name          = l.token.identifier;
         next_token(&l);
     }
-    else if (is_token('('))
+    else if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
     {
         next_token(&l);
         typespec = parse_typespec();
-        expect_token(')');
+        expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
         next_token(&l);
     }
     else if (is_token(TOKEN_TYPE_KW_FN))
@@ -222,17 +317,17 @@ ast_typespec_t * parse_base_type_typespec(void)
         typespec->fn.return_type    = NULL;
 
         next_token(&l);
-        expect_token('(');
+        expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
         next_token(&l);
 
-        bool has_args = !is_token(')');
+        bool has_args = !is_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
         while (has_args)
         {
-            ast_typespec_t * type = parse_typespec(); 
+            ast_typespec_t * type = parse_typespec();
             sb_push(typespec->fn.args, type);
             typespec->fn.num_args++;
 
-            if (is_token(','))
+            if (is_token(TOKEN_TYPE_COMMA))
             {
                 next_token(&l);
                 has_args = true;
@@ -243,10 +338,10 @@ ast_typespec_t * parse_base_type_typespec(void)
             }
         }
 
-        expect_token(')');
+        expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
         next_token(&l);
 
-        if (is_token(':'))
+        if (is_token(TOKEN_TYPE_COLON))
         {
             next_token(&l);
             typespec->fn.return_type = parse_typespec();
@@ -264,25 +359,25 @@ ast_typespec_t * parse_typespec(void)
 {
     ast_typespec_t * type = parse_base_type_typespec();
 
-    while (is_token('*') || is_token('['))
+    while (is_token(TOKEN_TYPE_MULT) || is_token(TOKEN_TYPE_BRACKET_OPEN))
     {
         ast_typespec_t * parent_type = ast_new_typespec(AST_TYPESPEC_POINTER);
 
-        if (is_token('*'))
+        if (is_token(TOKEN_TYPE_MULT))
         {
             next_token(&l);
             parent_type->type = AST_TYPESPEC_POINTER;
             parent_type->pointer.base = type;
             type = parent_type;
         }
-        else if (is_token('['))
+        else if (is_token(TOKEN_TYPE_BRACKET_OPEN))
         {
             next_token(&l);
             parent_type->type = AST_TYPESPEC_ARRAY;
             parent_type->array.base = type;
             parent_type->array.size_expr = parse_expr();
 
-            expect_token(']');
+            expect_token(TOKEN_TYPE_BRACKET_CLOSE);
             next_token(&l);
             type = parent_type;
         }
@@ -312,7 +407,7 @@ ast_decl_t * parse_type_decl(void)
     const char * name = l.token.identifier;
 
     next_token(&l);
-    expect_token('=');
+    expect_token(TOKEN_TYPE_ASSIGN);
     next_token(&l);
 
     ast_decl_t * decl = ast_new_decl(AST_DECL_TYPE);
@@ -325,7 +420,6 @@ ast_decl_t * parse_fn_decl(void)
 {
     return NULL; // @Todo
 }
-
 
 sb_t(ast_decl_t *) parse_document(void)
 {
@@ -359,7 +453,7 @@ sb_t(ast_decl_t *) parse_document(void)
         case TOKEN_TYPE_KW_TYPE:
             next_token(&l);
             sb_push(top_level_nodes, parse_type_decl());
-            expect_token(';');
+            expect_token(TOKEN_TYPE_SEMICOLON);
             next_token(&l);
             break;
         case TOKEN_TYPE_KW_FN:

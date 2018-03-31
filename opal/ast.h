@@ -103,7 +103,11 @@ typedef struct ast_expr_t
             int32_t num_args;
         } compound;
         const char * name;
-        const char * string_value;
+        struct
+        {
+            sb_t(const char) str;
+            uint64_t length;
+        } string_value;
         int64_t int_value;
         double float_value;
     };

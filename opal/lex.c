@@ -48,9 +48,9 @@ char escaped_string_chars[256] =
 };
 
 bool keywords_initilized = false;
-const char * keywords[TOKEN_TYPE_KW_END_ - TOKEN_TYPE_KW_FIRST_];
+const char * keywords[TOKEN_TYPE_KW_END_ - TOKEN_TYPE_KW_START_ - 1];
 
-#define REGISTER_KEYWORD(NAME, name) keywords[TOKEN_TYPE_KW_##NAME - TOKEN_TYPE_KW_FIRST_] = intern_string(name);
+#define REGISTER_KEYWORD(NAME, name) keywords[TOKEN_TYPE_KW_##NAME - TOKEN_TYPE_KW_START_ - 1] = intern_string(name);
 void init_keywords(void)
 {
     if (keywords_initilized)
@@ -130,9 +130,9 @@ void scan_identifier(lexer_t * l)
     uint64_t length = l->stream - start;
     l->token.identifier = intern_string_range(start, l->stream - 1);
 
-    for (int32_t kw = TOKEN_TYPE_KW_FIRST_; kw < TOKEN_TYPE_KW_END_; ++kw)
+    for (int32_t kw = TOKEN_TYPE_KW_START_ + 1; kw < TOKEN_TYPE_KW_END_; ++kw)
     {
-        if (l->token.identifier == keywords[kw - TOKEN_TYPE_KW_FIRST_])
+        if (l->token.identifier == keywords[kw - TOKEN_TYPE_KW_START_ - 1])
         {
             l->token.type = kw;
             break;
@@ -255,6 +255,7 @@ bool try_scan_operator_3(lexer_t * l, const char * chars, token_type_t token_typ
     return true;
 }
 
+#define HANDLE_CHAR_TOKEN(c, t) case c: { l->token.type = t; l->stream++; break; }
 void next_token(lexer_t * l)
 {
     assert(l);
@@ -371,13 +372,28 @@ void next_token(lexer_t * l)
         }
         break;
 
+    HANDLE_CHAR_TOKEN('?', TOKEN_TYPE_QUESTION);
+    HANDLE_CHAR_TOKEN(':', TOKEN_TYPE_COLON);
+    HANDLE_CHAR_TOKEN(';', TOKEN_TYPE_SEMICOLON);
+    HANDLE_CHAR_TOKEN(',', TOKEN_TYPE_COMMA);
+    HANDLE_CHAR_TOKEN('{', TOKEN_TYPE_BRACE_OPEN);
+    HANDLE_CHAR_TOKEN('}', TOKEN_TYPE_BRACE_CLOSE);
+    HANDLE_CHAR_TOKEN('[', TOKEN_TYPE_BRACKET_OPEN);
+    HANDLE_CHAR_TOKEN(']', TOKEN_TYPE_BRACKET_CLOSE);
+    HANDLE_CHAR_TOKEN('(', TOKEN_TYPE_PARENTHESIS_OPEN);
+    HANDLE_CHAR_TOKEN(')', TOKEN_TYPE_PARENTHESIS_CLOSE);
+    HANDLE_CHAR_TOKEN('.', TOKEN_TYPE_DOT);
+    HANDLE_CHAR_TOKEN('\0', TOKEN_TYPE_EOF);
+
     default:
         {
-            l->token.type = *l->stream++;
+            printf("Invalid character '%c'\n", *l->stream);
+            exit(1);
         }
         break;
     }
 }
+#undef HANDLE_CHAR_TOKEN
 
 void init_lexer(lexer_t * l, const char * input)
 {
