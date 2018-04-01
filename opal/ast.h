@@ -260,14 +260,13 @@ typedef enum ast_decl_type_t
 typedef struct ast_enum_item_t
 {
     const char * name;
-    ast_typespec_t * expr;
+    ast_expr_t * expr;
 } ast_enum_item_t;
 
 typedef struct ast_aggregate_item_t
 {
     const char * name;
     ast_typespec_t * type;
-    ast_expr_t * expr;
 } ast_aggregate_item_t;
 
 typedef struct ast_param_t
@@ -316,3 +315,6 @@ ast_decl_t * ast_new_decl(ast_decl_type_t type);
 ast_typespec_t * ast_new_typespec(ast_typespec_type_t type);
 ast_expr_t * ast_new_expr(ast_expr_type_t type);
 ast_cmpnd_field_t * ast_new_cmpnd_field(ast_cmpnd_field_type_t type);
+ast_aggregate_item_t * ast_new_aggregate_item();
+ast_enum_item_t * ast_new_enum_item();
+

@@ -29,3 +29,13 @@ ast_cmpnd_field_t * ast_new_cmpnd_field(ast_cmpnd_field_type_t type)
     return field;
 }
 
+ast_aggregate_item_t * ast_new_aggregate_item()
+{
+    return xmalloc(sizeof(ast_aggregate_item_t));
+}
+
+ast_enum_item_t * ast_new_enum_item()
+{
+    return xmalloc(sizeof(ast_enum_item_t));
+}
+

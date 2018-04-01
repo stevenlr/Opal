@@ -487,17 +487,97 @@ ast_typespec_t * parse_typespec(void)
 
 ast_decl_t * parse_enum_decl(void)
 {
-    return NULL; // @Todo
+    ast_decl_t * decl = ast_new_decl(AST_DECL_ENUM);
+    decl->enum_decl.items = NULL;
+    decl->enum_decl.num_items = 0;
+    expect_token(TOKEN_TYPE_IDENTIFIER);
+    decl->name = l.token.identifier;
+    next_token(&l);
+    expect_token(TOKEN_TYPE_COLON);
+    next_token(&l);
+    expect_token(TOKEN_TYPE_IDENTIFIER);
+    decl->enum_decl.base_type = parse_typespec();
+    expect_token(TOKEN_TYPE_BRACE_OPEN);
+    next_token(&l);
+
+    while (true)
+    {
+        if (is_token(TOKEN_TYPE_BRACE_CLOSE)) { break; }
+        expect_token(TOKEN_TYPE_IDENTIFIER);
+        ast_enum_item_t * item = ast_new_enum_item();
+        item->name = l.token.identifier;
+        item->expr = NULL;
+        sb_push(decl->enum_decl.items, item);
+        decl->enum_decl.num_items++;
+        next_token(&l);
+
+        if (is_token(TOKEN_TYPE_ASSIGN))
+        {
+            next_token(&l);
+            item->expr = parse_expr();
+        }
+
+        if (!is_token(TOKEN_TYPE_COMMA)) { break; }
+        next_token(&l);
+    }
+
+    expect_token(TOKEN_TYPE_BRACE_CLOSE);
+    next_token(&l);
+    return decl;
 }
 
 ast_decl_t * parse_aggregate_decl(ast_decl_type_t type)
 {
-    return NULL; // @Todo
+    ast_decl_t * decl = ast_new_decl(type);
+    expect_token(TOKEN_TYPE_IDENTIFIER);
+    decl->name = l.token.identifier;
+    decl->aggregate_decl.items = NULL;
+    decl->aggregate_decl.num_items = 0;
+    next_token(&l);
+    expect_token(TOKEN_TYPE_BRACE_OPEN);
+    next_token(&l);
+
+    while (true)
+    {
+        if (is_token(TOKEN_TYPE_BRACE_CLOSE)) { break; }
+        ast_aggregate_item_t * item = ast_new_aggregate_item();
+        sb_push(decl->aggregate_decl.items, item);
+        decl->aggregate_decl.num_items++;
+        expect_token(TOKEN_TYPE_IDENTIFIER);
+        item->name = l.token.identifier;
+        next_token(&l);
+        expect_token(TOKEN_TYPE_COLON);
+        next_token(&l);
+        item->type = parse_typespec();
+        expect_token(TOKEN_TYPE_SEMICOLON);
+        next_token(&l);
+    }
+
+    expect_token(TOKEN_TYPE_BRACE_CLOSE);
+    next_token(&l);
+    return decl;
 }
 
 ast_decl_t * parse_const_var_decl(ast_decl_type_t type)
 {
-    return NULL; // @Todo
+    ast_decl_t * decl = ast_new_decl(type);
+    expect_token(TOKEN_TYPE_IDENTIFIER);
+    decl->name = l.token.identifier;
+    next_token(&l);
+    expect_token(TOKEN_TYPE_COLON);
+    next_token(&l);
+    decl->var_decl.type = parse_typespec();
+    
+    if (type == AST_DECL_VAR && !is_token(TOKEN_TYPE_ASSIGN))
+    {
+        decl->var_decl.expr = NULL;
+        return decl;
+    }
+
+    expect_token(TOKEN_TYPE_ASSIGN);
+    next_token(&l);
+    decl->var_decl.expr = parse_expr();
+    return decl;
 }
 
 ast_decl_t * parse_type_decl(void)
@@ -544,10 +624,14 @@ sb_t(ast_decl_t *) parse_document(void)
         case TOKEN_TYPE_KW_VAR:
             next_token(&l);
             sb_push(top_level_nodes, parse_const_var_decl(AST_DECL_VAR));
+            expect_token(TOKEN_TYPE_SEMICOLON);
+            next_token(&l);
             break;
         case TOKEN_TYPE_KW_CONST:
             next_token(&l);
             sb_push(top_level_nodes, parse_const_var_decl(AST_DECL_CONST));
+            expect_token(TOKEN_TYPE_SEMICOLON);
+            next_token(&l);
             break;
         case TOKEN_TYPE_KW_TYPE:
             next_token(&l);
@@ -577,6 +661,9 @@ void test_parser(void)
 {
     init_lexer(&l,
         "type my_function = fn(i32*, i32[16+7 + (:Vector[2]*){4+5, 78} + Vector{ .cheese = 42+42, ['5'] = 5 }]**): i32;"
+        "enum hello : i32 { hello, popo = 42+59, abab, } enum a : i32 { test = 43, } enum b : i32 { d=9} enum p:i32{d}" 
+        "var i : i32; var b: i8 = 45 + 89; const b : i32 = 2;"
+        "struct cheese {a: i32; b: i32*[2]*; } union a {a: Vector; } struct popo {}"
     );
     parse_document();
 }
