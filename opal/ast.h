@@ -37,6 +37,24 @@ typedef struct ast_typespec_t
     };
 } ast_typespec_t;
 
+typedef enum ast_cmpnd_field_type_t
+{
+    AST_CMPND_FIELD_EXPR,
+    AST_CMPND_FIELD_FIELD,
+    AST_CMPND_FIELD_INDEX
+} ast_cmpnd_field_type_t;
+
+typedef struct ast_cmpnd_field_t
+{
+    ast_cmpnd_field_type_t type;
+    struct ast_expr_t * expr;
+    union
+    {
+        struct ast_expr_t * index_expr;
+        const char * field_name;
+    };
+} ast_cmpnd_field_t;
+
 typedef enum ast_expr_type_t
 {
     AST_EXPR_TERNARY,
@@ -99,7 +117,7 @@ typedef struct ast_expr_t
         struct
         {
             ast_typespec_t * type;
-            sb_t(struct ast_expr_t *) args;
+            sb_t(struct ast_cmpnd_field_t *) args;
             int32_t num_args;
         } compound;
         const char * name;
@@ -297,4 +315,4 @@ typedef struct ast_decl_t
 ast_decl_t * ast_new_decl(ast_decl_type_t type);
 ast_typespec_t * ast_new_typespec(ast_typespec_type_t type);
 ast_expr_t * ast_new_expr(ast_expr_type_t type);
-
+ast_cmpnd_field_t * ast_new_cmpnd_field(ast_cmpnd_field_type_t type);

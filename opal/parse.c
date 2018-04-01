@@ -58,12 +58,67 @@ bool is_token_unary_op(void)
         || op == TOKEN_TYPE_MULT;
 }
 
-// operand =         FLOAT
-//                 | type? '{' expr_list? '}'
-//                 | cast '(' type ',' expr ')'
-
-// @Todo Write grammar for indexed and named compound
 ast_expr_t * parse_expr(void);
+ast_typespec_t * parse_typespec(void);
+
+ast_cmpnd_field_t * parse_cmpnd_field(void)
+{
+    ast_cmpnd_field_t * field = NULL;
+    if (is_token(TOKEN_TYPE_DOT) || is_token(TOKEN_TYPE_BRACKET_OPEN))
+    {
+        if (is_token(TOKEN_TYPE_DOT))
+        {
+            field = ast_new_cmpnd_field(AST_CMPND_FIELD_FIELD);
+            next_token(&l);
+            expect_token(TOKEN_TYPE_IDENTIFIER);
+            field->field_name = l.token.identifier;
+            next_token(&l);
+        }
+        else
+        {
+            field = ast_new_cmpnd_field(AST_CMPND_FIELD_INDEX);
+            next_token(&l);
+            field->index_expr = parse_expr();
+            expect_token(TOKEN_TYPE_BRACKET_CLOSE);
+            next_token(&l);
+        }
+        expect_token(TOKEN_TYPE_ASSIGN);
+        next_token(&l);
+    }
+    else
+    {
+        field = ast_new_cmpnd_field(AST_CMPND_FIELD_EXPR);
+    }
+    field->expr = parse_expr();
+    return field;
+}
+
+ast_expr_t * parse_expr_compound(ast_typespec_t * type)
+{
+    ast_expr_t * expr = ast_new_expr(AST_EXPR_COMPOUND);
+    expr->compound.type = type;
+    expr->compound.args = NULL;
+    expr->compound.num_args = 0;
+
+    expect_token(TOKEN_TYPE_BRACE_OPEN);
+    next_token(&l);
+
+    if (!is_token(TOKEN_TYPE_BRACE_CLOSE))
+    {
+        while (true)
+        {
+            ast_cmpnd_field_t * field = parse_cmpnd_field();
+            sb_push(expr->compound.args, field);
+            expr->compound.num_args++;
+            if (!is_token(TOKEN_TYPE_COMMA)) { break; }
+            next_token(&l);
+        }
+    }
+
+    expect_token(TOKEN_TYPE_BRACE_CLOSE);
+    next_token(&l);
+    return expr;
+}
 
 ast_expr_t * parse_expr_operand(void)
 {
@@ -76,12 +131,21 @@ ast_expr_t * parse_expr_operand(void)
     }
     else if (is_token(TOKEN_TYPE_IDENTIFIER))
     {
+        const char * identifier = l.token.identifier;
+        next_token(&l);
+        
+        if (is_token(TOKEN_TYPE_BRACE_OPEN))
+        {
+            ast_typespec_t * type = ast_new_typespec(AST_TYPESPEC_NAME);
+            type->name = identifier;
+            return parse_expr_compound(type);
+        }
+        
         ast_expr_t * expr = ast_new_expr(AST_EXPR_NAME);
         expr->name = l.token.identifier;
-        next_token(&l);
         return expr;
     }
-    if (is_token(TOKEN_TYPE_STRING))
+    else if (is_token(TOKEN_TYPE_STRING))
     {
         ast_expr_t * expr = ast_new_expr(AST_EXPR_STRING);
         expr->string_value.str = l.token.string.str;
@@ -89,15 +153,44 @@ ast_expr_t * parse_expr_operand(void)
         next_token(&l);
         return expr;
     }
-    if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
+    else if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
     {
         next_token(&l);
+        
+        if (is_token(TOKEN_TYPE_COLON))
+        {
+            next_token(&l);
+            ast_typespec_t * type = parse_typespec();
+            expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+            next_token(&l);
+            ast_expr_t * expr = parse_expr_compound(type);
+            return expr;
+        }
+
         ast_expr_t * expr = parse_expr();
         expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
         next_token(&l);
         return expr;
     }
-    // @Todo handle floats, compounds, and cast
+    else if (is_token(TOKEN_TYPE_KW_CAST))
+    {
+        ast_expr_t * expr = ast_new_expr(AST_EXPR_CAST);
+        next_token(&l);
+        expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+        next_token(&l);
+        expr->cast.type = parse_typespec();
+        expect_token(TOKEN_TYPE_COMMA);
+        next_token(&l);
+        expr->cast.expr = parse_expr();
+        expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+        next_token(&l);
+        return expr;
+    }
+    else if (is_token(is_token(TOKEN_TYPE_BRACE_OPEN)))
+    {
+        return parse_expr_compound(NULL);
+    }
+    // @Todo handle floats
 
     printf("Invalid operand\n");
     return NULL;
@@ -124,12 +217,19 @@ ast_expr_t * parse_expr_invoke(void)
         if (is_token(TOKEN_TYPE_PARENTHESIS_OPEN))
         {
             next_token(&l);
-            sb_t(ast_expr_t *) exprs = parse_expr_list();
             ast_expr_t * args_expr = ast_new_expr(AST_EXPR_INVOKE);
             args_expr->invoke.expr = expr;
-            args_expr->invoke.args = exprs;
-            args_expr->invoke.num_args = sb_len(exprs);
+            args_expr->invoke.args = NULL;
+            args_expr->invoke.num_args = 0;
             expr = args_expr;
+
+            if (!is_token(TOKEN_TYPE_PARENTHESIS_CLOSE))
+            {
+                sb_t(ast_expr_t *) exprs = parse_expr_list();
+                args_expr->invoke.args = exprs;
+                args_expr->invoke.num_args = sb_len(exprs);
+            }
+
             expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
             next_token(&l);
         }
@@ -291,7 +391,6 @@ ast_expr_t * parse_expr(void)
     return parse_expr_tern();
 }
 
-ast_typespec_t * parse_typespec(void);
 ast_typespec_t * parse_base_type_typespec(void)
 {
     ast_typespec_t * typespec = NULL;
@@ -476,7 +575,9 @@ sb_t(ast_decl_t *) parse_document(void)
 
 void test_parser(void)
 {
-    init_lexer(&l, "type my_function = fn(i32*, i32[16+7]**): i32;");
+    init_lexer(&l,
+        "type my_function = fn(i32*, i32[16+7 + (:Vector[2]*){4+5, 78} + Vector{ .cheese = 42+42, ['5'] = 5 }]**): i32;"
+    );
     parse_document();
 }
 

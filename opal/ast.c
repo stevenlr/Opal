@@ -22,3 +22,10 @@ ast_expr_t * ast_new_expr(ast_expr_type_t type)
     return expr;
 }
 
+ast_cmpnd_field_t * ast_new_cmpnd_field(ast_cmpnd_field_type_t type)
+{
+    ast_cmpnd_field_t * field = xmalloc(sizeof(ast_cmpnd_field_t));
+    field->type = type;
+    return field;
+}
+

@@ -66,12 +66,18 @@ stmt =            'if' '(' expr ')' stmt_block ('else' 'if' '(' expr ')' stmt_bl
 
 expr_list =     expr (',' expr)*
 
+cmpnd_field =     expr
+                | '.' NAME '=' expr
+                | '[' expr ']' '=' expr
+
+cmpnd_field_list = cmpnd_field (',' cmpnd_field)*
+
 operand =         NAME
                 | STRING
                 | INTEGER
                 | FLOAT
                 | '(' expr ')'
-                | type? '{' expr_list? '}'
+                | (NAME | '(' ':' type ')')? '{' cmpnd_field_list? '}'
                 | cast '(' type ',' expr ')'
 
 invoke_e =      operand ('(' expr_list? ')' | '[' expr ']' | '.' NAME)*
