@@ -99,8 +99,6 @@ void scan_integer(lexer_t * l)
             base = 2;
             l->stream++;
             break;
-        default:
-            assert(isdigit(*l->stream) && "Invalid integer base"); // @Todo A nice error handler 
         }
     }
 

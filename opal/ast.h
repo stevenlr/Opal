@@ -149,20 +149,12 @@ typedef struct ast_simple_stmt_t
         ast_expr_t * expr;
         struct
         {
-            ast_expr_t * expr;
-        } inc, dec;
-        struct
-        {
             token_type_t op;
             ast_expr_t * right;
             ast_expr_t * left;
         } assign;
-        struct
-        {
-            const char * name;
-            ast_typespec_t * type;
-            ast_expr_t * expr;
-        } var_decl, const_decl;
+        struct ast_decl_t * var_decl;
+        struct ast_decl_t * const_decl;
     };
 } ast_simple_stmt_t;
 
@@ -227,6 +219,7 @@ typedef struct ast_stmt_t
             ast_expr_t * condition;
             sb_t(ast_simple_stmt_t *) incr_stmts;
             int32_t num_incr_stmts;
+            struct ast_stmt_block_t * stmt_block;
         } for_stmt;
         struct
         {
@@ -315,6 +308,10 @@ ast_decl_t * ast_new_decl(ast_decl_type_t type);
 ast_typespec_t * ast_new_typespec(ast_typespec_type_t type);
 ast_expr_t * ast_new_expr(ast_expr_type_t type);
 ast_cmpnd_field_t * ast_new_cmpnd_field(ast_cmpnd_field_type_t type);
-ast_aggregate_item_t * ast_new_aggregate_item();
-ast_enum_item_t * ast_new_enum_item();
+ast_aggregate_item_t * ast_new_aggregate_item(void);
+ast_enum_item_t * ast_new_enum_item(void);
+ast_param_t * ast_new_param(void);
+ast_stmt_block_t * ast_new_stmt_block(void);
+ast_stmt_t * ast_new_stmt(ast_stmt_type_t type);
+ast_simple_stmt_t * ast_new_simple_stmt(ast_simple_stmt_type_t type);
 

@@ -7,12 +7,12 @@
 
 lexer_t l;
 
-bool is_token(token_type_t type)
+inline bool is_token(token_type_t type)
 {
     return l.token.type == type;
 }
 
-void expect_token(token_type_t type)
+inline void expect_token(token_type_t type)
 {
     if (!is_token(type))
     {
@@ -21,25 +21,25 @@ void expect_token(token_type_t type)
     }
 }
 
-bool is_token_cmp_op(void)
+inline bool is_token_cmp_op(void)
 {
     token_type_t type = l.token.type;
     return type > TOKEN_TYPE_CMP_START_ && type < TOKEN_TYPE_CMP_END_;
 }
 
-bool is_token_add_op(void)
+inline bool is_token_add_op(void)
 {
     token_type_t type = l.token.type;
     return type > TOKEN_TYPE_ADD_START_ && type < TOKEN_TYPE_ADD_END_;
 }
 
-bool is_token_mult_op(void)
+inline bool is_token_mult_op(void)
 {
     token_type_t type = l.token.type;
     return type > TOKEN_TYPE_MULT_START_ && type < TOKEN_TYPE_MULT_END_;
 }
 
-bool is_token_invoke_op(void)
+inline bool is_token_invoke_op(void)
 {
     token_type_t op = l.token.type;
     return op == TOKEN_TYPE_PARENTHESIS_OPEN 
@@ -47,7 +47,7 @@ bool is_token_invoke_op(void)
         || op == TOKEN_TYPE_DOT;   
 }
 
-bool is_token_unary_op(void)
+inline bool is_token_unary_op(void)
 {
     token_type_t op = l.token.type;
     return op == TOKEN_TYPE_PLUS
@@ -56,6 +56,12 @@ bool is_token_unary_op(void)
         || op == TOKEN_TYPE_NOT
         || op == TOKEN_TYPE_AND
         || op == TOKEN_TYPE_MULT;
+}
+
+inline bool is_token_assign_op(void)
+{
+    token_type_t type = l.token.type;
+    return type > TOKEN_TYPE_ASSIGN_START_ && type < TOKEN_TYPE_ASSIGN_END_;
 }
 
 ast_expr_t * parse_expr(void);
@@ -583,21 +589,257 @@ ast_decl_t * parse_const_var_decl(ast_decl_type_t type)
 ast_decl_t * parse_type_decl(void)
 {
     expect_token(TOKEN_TYPE_IDENTIFIER);
-    const char * name = l.token.identifier;
-
+    ast_decl_t * decl = ast_new_decl(AST_DECL_TYPE);
+    decl->name = l.token.identifier;
     next_token(&l);
     expect_token(TOKEN_TYPE_ASSIGN);
     next_token(&l);
-
-    ast_decl_t * decl = ast_new_decl(AST_DECL_TYPE);
-    decl->name              = name;
-    decl->type_decl.type    = parse_typespec();
+    decl->type_decl.type = parse_typespec();
     return decl;
+}
+
+ast_simple_stmt_t * parse_simple_stmt(void)
+{
+    ast_simple_stmt_t * stmt = NULL;
+
+    if (is_token(TOKEN_TYPE_KW_VAR))
+    {
+        next_token(&l);
+        stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_VAR_DECL);
+        stmt->var_decl = parse_const_var_decl(AST_DECL_VAR);
+    }
+    else if (is_token(TOKEN_TYPE_KW_CONST))
+    {
+        next_token(&l);
+        stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_CONST_DECL);
+        stmt->const_decl = parse_const_var_decl(AST_DECL_CONST);
+    }
+    else
+    {
+        ast_expr_t * expr = parse_expr();
+
+        if (is_token(TOKEN_TYPE_INC))
+        {
+            next_token(&l);
+            stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_INCREMENT);
+            stmt->expr = expr;
+        }
+        else if (is_token(TOKEN_TYPE_DEC))
+        {
+            next_token(&l);
+            stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_DECREMENT);
+            stmt->expr = expr;
+        }
+        else if (is_token_assign_op())
+        {
+            stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_ASSIGN);
+            stmt->assign.op = l.token.type;
+            stmt->assign.left = expr;
+            next_token(&l);
+            stmt->assign.right = parse_expr();
+        }
+        else
+        {
+            stmt = ast_new_simple_stmt(AST_SIMPLE_STMT_EXPR);
+            stmt->expr = expr;
+        }
+    }
+
+    if (stmt == NULL)
+    {
+        printf("Invalid token\n");
+        exit(1);
+    }
+    return stmt;
+}
+
+sb_t(ast_simple_stmt_t *) parse_simple_stmt_list(void)
+{
+    sb_t(ast_simple_stmt_t *) stmts = NULL;
+    bool has_stmts = true;
+    while (has_stmts)
+    {
+        ast_simple_stmt_t * stmt = parse_simple_stmt();
+        sb_push(stmts, stmt);
+
+        if (!is_token(TOKEN_TYPE_COMMA))
+        {
+            has_stmts = false;
+        }
+        else
+        {
+            next_token(&l);
+        }
+    }
+    return stmts;
+}
+
+ast_stmt_block_t * parse_stmt_block(void)
+{
+    expect_token(TOKEN_TYPE_BRACE_OPEN);
+    next_token(&l);
+
+    ast_stmt_block_t * block = ast_new_stmt_block();
+    block->stmts = NULL;
+    block->num_stmts = 0;
+
+    bool has_more_stmts = true;
+    while (has_more_stmts)
+    {
+        ast_stmt_t * stmt = NULL;
+
+        switch (l.token.type)
+        {
+        case TOKEN_TYPE_KW_IF:
+            break;
+        case TOKEN_TYPE_KW_WHILE:
+            {
+                stmt = ast_new_stmt(AST_STMT_WHILE);
+                next_token(&l);
+                expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+                next_token(&l);
+                stmt->while_stmt.condition = parse_expr();
+                expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+                next_token(&l);
+                stmt->while_stmt.stmt_block = parse_stmt_block();
+            }
+            break;
+        case TOKEN_TYPE_KW_FOR:
+            {
+                stmt = ast_new_stmt(AST_STMT_FOR);
+                next_token(&l);
+                expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+                next_token(&l);
+                
+                stmt->for_stmt.init_stmts = NULL;
+                if (!is_token(TOKEN_TYPE_SEMICOLON))
+                {
+                    stmt->for_stmt.init_stmts = parse_simple_stmt_list();
+                }
+                stmt->for_stmt.num_init_stmts = sb_len(stmt->for_stmt.init_stmts);
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+
+                stmt->for_stmt.condition = parse_expr();
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+
+                stmt->for_stmt.incr_stmts = NULL;
+                if (!is_token(TOKEN_TYPE_PARENTHESIS_CLOSE))
+                {
+                    stmt->for_stmt.incr_stmts = parse_simple_stmt_list();
+                }
+                stmt->for_stmt.num_incr_stmts = sb_len(stmt->for_stmt.incr_stmts);
+
+                expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+                next_token(&l);
+                stmt->for_stmt.stmt_block = parse_stmt_block();
+            }
+            break;
+        case TOKEN_TYPE_KW_SWITCH:
+            break;
+        case TOKEN_TYPE_KW_RETURN:
+            {
+                stmt = ast_new_stmt(AST_STMT_RETURN);
+                stmt->return_stmt = NULL;
+                next_token(&l);
+                if (!is_token(TOKEN_TYPE_SEMICOLON))
+                {
+                    stmt->return_stmt = parse_expr();
+                }
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+            }
+            break;
+        case TOKEN_TYPE_KW_CONTINUE:
+            {
+                stmt = ast_new_stmt(AST_STMT_CONTINUE);
+                next_token(&l);
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+            }
+            break;
+        case TOKEN_TYPE_KW_BREAK:
+            {
+                stmt = ast_new_stmt(AST_STMT_BREAK);
+                next_token(&l);
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+            }
+            break;
+        case TOKEN_TYPE_BRACE_OPEN:
+            {
+                stmt = ast_new_stmt(AST_STMT_BLOCK);
+                stmt->stmt_block = parse_stmt_block();
+            }
+            break;
+        case TOKEN_TYPE_BRACE_CLOSE:
+            has_more_stmts = false;
+            break;
+        default:
+            {
+                stmt = ast_new_stmt(AST_STMT_SIMPLE);
+                stmt->simple_stmt = parse_simple_stmt();
+                expect_token(TOKEN_TYPE_SEMICOLON);
+                next_token(&l);
+            }
+            break;
+        }
+
+        if (stmt != NULL)
+        {
+            sb_push(block->stmts, stmt);
+            block->num_stmts++;
+        }
+    }
+
+    expect_token(TOKEN_TYPE_BRACE_CLOSE);
+    next_token(&l);
+    return block;
 }
 
 ast_decl_t * parse_fn_decl(void)
 {
-    return NULL; // @Todo
+    ast_decl_t * decl = ast_new_decl(AST_DECL_FN);
+    decl->fn_decl.params        = NULL;
+    decl->fn_decl.num_params    = 0;
+    decl->fn_decl.return_type   = NULL;
+    decl->fn_decl.stmt_block    = NULL;
+
+    expect_token(TOKEN_TYPE_IDENTIFIER);
+    decl->name = l.token.identifier;
+    next_token(&l);
+    expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+    next_token(&l);
+
+    while (!is_token(TOKEN_TYPE_PARENTHESIS_CLOSE))
+    {
+        ast_param_t * param = ast_new_param();
+        expect_token(TOKEN_TYPE_IDENTIFIER);
+        param->name = l.token.identifier;
+        next_token(&l);
+        expect_token(TOKEN_TYPE_COLON);
+        next_token(&l);
+        param->type = parse_typespec();
+
+        sb_push(decl->fn_decl.params, param);
+        decl->fn_decl.num_params++;
+
+        if (!is_token(TOKEN_TYPE_COMMA)) { break; }
+        next_token(&l);
+    }
+
+    expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+    next_token(&l);
+
+    if (is_token(TOKEN_TYPE_COLON))
+    {
+        next_token(&l);
+        decl->fn_decl.return_type = parse_typespec();
+    }
+
+    decl->fn_decl.stmt_block = parse_stmt_block();
+    return decl;
 }
 
 sb_t(ast_decl_t *) parse_document(void)
@@ -664,6 +906,17 @@ void test_parser(void)
         "enum hello : i32 { hello, popo = 42+59, abab, } enum a : i32 { test = 43, } enum b : i32 { d=9} enum p:i32{d}" 
         "var i : i32; var b: i8 = 45 + 89; const b : i32 = 2;"
         "struct cheese {a: i32; b: i32*[2]*; } union a {a: Vector; } struct popo {}"
+        "fn a(a: i32, b: popo) {} fn b(): u64 {"
+        "   break; continue; return; return 45 + popo[p + 9](42);"
+        "   { return 5; return; {} }"
+        "   while (45 + 6) { break; }"
+        "   for (; true; ) { break; }"
+        "   for (var i: i32 = 0; i < 10; i++) { return i; var i: i32 = 45 + 6; i += test; i++; }"
+        "   for (var i: i32 = 45+89, i = 0, const a: i32 = 0x546, i++; true; i++, i += 2, i -= 1) { return i; }"
+        "   this_is_a_method_call(a, b, c);"
+        "   look_its.oop().chaining[45](45);"
+        "   const i: i32*[SIZE] = 45;"
+        "}"
     );
     parse_document();
 }

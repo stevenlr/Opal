@@ -45,7 +45,7 @@ stmt_block =    '{' stmt* '}'
 stmt_assign =   
 stmt =            'if' '(' expr ')' stmt_block ('else' 'if' '(' expr ')' stmt_block)* ('else' stmt_block)?
                 | 'while' '(' expr ')' stmt_block
-                | 'for' '(' stmt_simple_list ';' expr ';' stmt_simple_list ')' stmt_block
+                | 'for' '(' stmt_simple_list? ';' expr ';' stmt_simple_list? ')' stmt_block
                 | 'switch' '(' expr ')' switch_block
                 | 'return' expr? ';'
                 | 'continue' ';'

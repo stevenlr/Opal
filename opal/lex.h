@@ -40,7 +40,6 @@ typedef enum token_type_t
     TOKEN_TYPE_MULT_END_,
 
     TOKEN_TYPE_NOT,
-
     TOKEN_TYPE_LOGIC_NOT,
     TOKEN_TYPE_LOGIC_AND,
     TOKEN_TYPE_LOGIC_OR,
@@ -48,6 +47,7 @@ typedef enum token_type_t
     TOKEN_TYPE_DEC,
 
     // Assignments
+    TOKEN_TYPE_ASSIGN_START_,
     TOKEN_TYPE_ASSIGN,
     TOKEN_TYPE_ASSIGN_ADD,
     TOKEN_TYPE_ASSIGN_SUB,
@@ -60,6 +60,7 @@ typedef enum token_type_t
     TOKEN_TYPE_ASSIGN_XOR,
     TOKEN_TYPE_ASSIGN_SHR,
     TOKEN_TYPE_ASSIGN_SHL,
+    TOKEN_TYPE_ASSIGN_END_,
 
     // Punctuation
     TOKEN_TYPE_ARROW,
