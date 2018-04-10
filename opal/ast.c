@@ -63,3 +63,15 @@ ast_simple_stmt_t * ast_new_simple_stmt(ast_simple_stmt_type_t type)
     return stmt;
 }
 
+ast_switch_item_t * ast_new_switch_item(void)
+{
+    return xmalloc(sizeof(ast_switch_item_t));
+}
+
+ast_switch_case_literal_t * ast_new_switch_case_literal(ast_switch_case_literal_type_t type)
+{
+    ast_switch_case_literal_t * lit = xmalloc(sizeof(ast_switch_case_literal_t));
+    lit->type = type;
+    return lit;
+}
+

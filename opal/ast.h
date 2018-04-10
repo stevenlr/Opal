@@ -183,7 +183,7 @@ typedef struct ast_switch_case_literal_t
     union
     {
         const char * name;
-        int64_t integer;
+        uint64_t integer;
     };
 } ast_switch_case_literal_t;
 
@@ -191,7 +191,6 @@ typedef struct ast_switch_item_t
 {
     sb_t(ast_switch_case_literal_t *) values;
     int32_t num_values;
-    bool is_otherwise;
     struct ast_stmt_block_t * stmt_block;
 } ast_switch_item_t;
 
@@ -314,4 +313,6 @@ ast_param_t * ast_new_param(void);
 ast_stmt_block_t * ast_new_stmt_block(void);
 ast_stmt_t * ast_new_stmt(ast_stmt_type_t type);
 ast_simple_stmt_t * ast_new_simple_stmt(ast_simple_stmt_type_t type);
+ast_switch_item_t * ast_new_switch_item(void);
+ast_switch_case_literal_t * ast_new_switch_case_literal(ast_switch_case_literal_type_t type);
 

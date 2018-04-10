@@ -674,6 +674,12 @@ sb_t(ast_simple_stmt_t *) parse_simple_stmt_list(void)
     return stmts;
 }
 
+bool is_switch_case_value_token(void)
+{
+    return is_token(TOKEN_TYPE_INTEGER)
+        || is_token(TOKEN_TYPE_IDENTIFIER);
+}
+
 ast_stmt_block_t * parse_stmt_block(void)
 {
     expect_token(TOKEN_TYPE_BRACE_OPEN);
@@ -708,6 +714,7 @@ ast_stmt_block_t * parse_stmt_block(void)
                     expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
                     next_token(&l);
                     sb_push(stmt->if_stmt.stmt_blocks, parse_stmt_block());
+                    stmt->if_stmt.num_conditions++;
 
                     if (is_token(TOKEN_TYPE_KW_ELSE))
                     {
@@ -771,6 +778,90 @@ ast_stmt_block_t * parse_stmt_block(void)
             }
             break;
         case TOKEN_TYPE_KW_SWITCH:
+            {
+                stmt = ast_new_stmt(AST_STMT_SWITCH);
+                stmt->switch_stmt.expr = NULL;
+                stmt->switch_stmt.items = NULL;
+                stmt->switch_stmt.num_items = 0;
+
+                next_token(&l);
+                expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+                next_token(&l);
+                stmt->switch_stmt.expr = parse_expr();
+                expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+                next_token(&l);
+                expect_token(TOKEN_TYPE_BRACE_OPEN);
+                next_token(&l);
+
+                while (is_switch_case_value_token())
+                {
+                    ast_switch_item_t * item = ast_new_switch_item();
+                    item->values = NULL;
+                    item->num_values = 0;
+                    item->stmt_block = NULL;
+
+                    while (true)
+                    {
+                        if (!is_switch_case_value_token())
+                        {
+                            printf("Invalid case literal token\n");
+                            exit(1);
+                        }
+                        
+                        ast_switch_case_literal_t * lit = NULL;
+                        switch (l.token.type)
+                        {
+                        case TOKEN_TYPE_IDENTIFIER:
+                            {
+                                lit = ast_new_switch_case_literal(AST_CASE_LITERAL_NAME);
+                                lit->name = l.token.identifier;
+                            }
+                            break;
+                        case TOKEN_TYPE_INTEGER:
+                            {
+                                lit = ast_new_switch_case_literal(AST_CASE_LITERAL_INTEGER);
+                                lit->integer = l.token.integer;
+                            }
+                            break;
+                        }
+
+                        sb_push(item->values, lit);
+                        item->num_values++;
+                        next_token(&l);
+
+                        if (!is_token(TOKEN_TYPE_COMMA))
+                        {
+                            break;
+                        }
+                        next_token(&l);
+                    }
+
+                    expect_token(TOKEN_TYPE_ARROW);
+                    next_token(&l);
+
+                    item->stmt_block = parse_stmt_block();
+                    sb_push(stmt->switch_stmt.items, item);
+                    stmt->switch_stmt.num_items++;
+                }
+
+                if (is_token(TOKEN_TYPE_KW_OTHERWISE))
+                {
+                    next_token(&l);
+                    expect_token(TOKEN_TYPE_ARROW);
+                    next_token(&l);
+
+                    ast_switch_item_t * item = ast_new_switch_item();
+                    item->values = NULL;
+                    item->num_values = 0;
+
+                    item->stmt_block = parse_stmt_block();
+                    sb_push(stmt->switch_stmt.items, item);
+                    stmt->switch_stmt.num_items++;
+                }
+
+                expect_token(TOKEN_TYPE_BRACE_CLOSE);
+                next_token(&l);
+            }
             break;
         case TOKEN_TYPE_KW_RETURN:
             {
@@ -937,7 +1028,7 @@ void test_parser(void)
 {
     init_lexer(&l,
         "type my_function = fn(i32*, i32[16+7 + (:Vector[2]*){4+5, 78} + Vector{ .cheese = 42+42, ['5'] = 5 }]**): i32;"
-        "enum hello : i32 { hello, popo = 42+59, abab, } enum a : i32 { test = 43, } enum b : i32 { d=9} enum p:i32{d}" 
+        "enum hello : i32 { hello, popo = cast(f32*[90], 42+59), abab, } enum a : i32 { test = 43, } enum b : i32 { d=9} enum p:i32{d}" 
         "var i : i32; var b: i8 = 45 + 89; const b : i32 = 2;"
         "struct cheese {a: i32; b: i32*[2]*; } union a {a: Vector; } struct popo {}"
         "fn a(a: i32, b: popo) {} fn b(): u64 {"
@@ -955,6 +1046,11 @@ void test_parser(void)
         "   else if (false) {}"
         "   else if (a+b<c) {}"
         "   if (0) {} else if (1) {} else if (2) {} else {}"
+        "   switch (a + 1) {"
+        "       '8', 45, MY_VALUE -> { haha(); }"
+        "       8 -> {}"
+        "       otherwise -> { printf(\"Hello, world\\n\"); }"
+        "   }"
         "}"
     );
     parse_document();

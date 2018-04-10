@@ -34,8 +34,9 @@ type_list =     type (',' type)*
 
 switch_value =  INTEGER | NAME
 switch_value_list = switch_value (',' switch_value)*
-switch_case =   ('otherwise' | switch_value_list) '->' stmt_block
-switch_block =  '{' switch_case* '}'
+switch_case =   switch_value_list '->' stmt_block
+switch_otherwise = 'otherwise' '->' stmt_block
+switch_block =  '{' switch_case* switch_otherwise? '}'
 
 stmt_simple =     'var' var_decl
                 | 'const' const_decl
