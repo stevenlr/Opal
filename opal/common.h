@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 void * xmalloc(uint64_t size);
-void * xremalloc(uint64_t size);
+void * xrealloc(void * ptr, uint64_t size);
 
 void * _sb_grow_impl(void * b, int32_t increment, uint64_t value_size);
 
