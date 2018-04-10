@@ -203,7 +203,7 @@ typedef struct ast_stmt_t
         struct
         {
             sb_t(ast_expr_t *) conditions;
-            struct ast_stmt_block_t * stmt_blocks;
+            sb_t(struct ast_stmt_block_t *) stmt_blocks;
             int32_t num_conditions;
             struct ast_stmt_block_t * else_stmt_block;
         } if_stmt;

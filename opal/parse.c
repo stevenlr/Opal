@@ -691,6 +691,40 @@ ast_stmt_block_t * parse_stmt_block(void)
         switch (l.token.type)
         {
         case TOKEN_TYPE_KW_IF:
+            {
+                stmt = ast_new_stmt(AST_STMT_IF);
+                stmt->if_stmt.conditions = NULL;
+                stmt->if_stmt.stmt_blocks = NULL;
+                stmt->if_stmt.num_conditions = 0;
+                stmt->if_stmt.else_stmt_block = NULL;
+
+                bool expect_else = false;
+                while (is_token(TOKEN_TYPE_KW_IF))
+                {
+                    next_token(&l);
+                    expect_token(TOKEN_TYPE_PARENTHESIS_OPEN);
+                    next_token(&l);
+                    sb_push(stmt->if_stmt.conditions, parse_expr());
+                    expect_token(TOKEN_TYPE_PARENTHESIS_CLOSE);
+                    next_token(&l);
+                    sb_push(stmt->if_stmt.stmt_blocks, parse_stmt_block());
+
+                    if (is_token(TOKEN_TYPE_KW_ELSE))
+                    {
+                        next_token(&l);
+                        if (!is_token(TOKEN_TYPE_KW_IF))
+                        {
+                            expect_else = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (expect_else)
+                {
+                    stmt->if_stmt.else_stmt_block = parse_stmt_block();
+                }
+            }
             break;
         case TOKEN_TYPE_KW_WHILE:
             {
@@ -916,6 +950,11 @@ void test_parser(void)
         "   this_is_a_method_call(a, b, c);"
         "   look_its.oop().chaining[45](45);"
         "   const i: i32*[SIZE] = 45;"
+        "   if (true) { if (test) { test(); } "
+        "   if (a) {} else { doStuff(); }}"
+        "   else if (false) {}"
+        "   else if (a+b<c) {}"
+        "   if (0) {} else if (1) {} else if (2) {} else {}"
         "}"
     );
     parse_document();
